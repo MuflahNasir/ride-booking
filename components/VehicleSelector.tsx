@@ -58,62 +58,68 @@ export default function VehicleSelector({ distance, onSelectVehicle, selectedVeh
 
       {/* Vehicle List */}
       <ScrollView style={styles.vehicleList} showsVerticalScrollIndicator={false}>
-        {filteredVehicles.map((vehicle) => {
-          const fare = calculateFare(vehicle, distance);
-          const arrivalTime = estimateArrivalTime(vehicle, distance);
-          const isSelected = selectedVehicle?.id === vehicle.id;
+        {filteredVehicles.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#6B7280', marginTop: 24 }}>
+            No vehicles found for this category.
+          </Text>
+        ) : (
+          filteredVehicles.map((vehicle) => {
+            const fare = calculateFare(vehicle, distance);
+            const arrivalTime = estimateArrivalTime(vehicle, distance);
+            const isSelected = selectedVehicle?.id === vehicle.id;
 
-          return (
-            <TouchableOpacity
-              key={vehicle.id}
-              style={[styles.vehicleCard, isSelected && styles.vehicleCardSelected]}
-              onPress={() => onSelectVehicle(vehicle)}
-            >
-              <View style={styles.vehicleImageContainer}>
-                <Image source={{ uri: vehicle.image }} style={styles.vehicleImage} />
-                {vehicle.category === 'premium' && (
-                  <View style={styles.premiumBadge}>
-                    <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
+            return (
+              <TouchableOpacity
+                key={vehicle.id}
+                style={[styles.vehicleCard, isSelected && styles.vehicleCardSelected]}
+                onPress={() => onSelectVehicle(vehicle)}
+              >
+                <View style={styles.vehicleImageContainer}>
+                  <Image source={{ uri: vehicle.image }} style={styles.vehicleImage} />
+                  {vehicle.category === 'premium' && (
+                    <View style={styles.premiumBadge}>
+                      <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.vehicleInfo}>
+                  <View style={styles.vehicleHeader}>
+                    <Text style={styles.vehicleName}>{vehicle.name}</Text>
+                    <Text style={styles.vehiclePrice}>${fare.toFixed(2)}</Text>
+                  </View>
+                  
+                  <Text style={styles.vehicleDescription}>{vehicle.description}</Text>
+                  
+                  <View style={styles.vehicleDetails}>
+                    <View style={styles.detailItem}>
+                      <Clock size={14} color="#6B7280" />
+                      <Text style={styles.detailText}>{arrivalTime} min</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Users size={14} color="#6B7280" />
+                      <Text style={styles.detailText}>{vehicle.capacity}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.featuresContainer}>
+                    {vehicle.features.slice(0, 3).map((feature, index) => (
+                      <View key={index} style={styles.featureTag}>
+                        <Text style={styles.featureText}>{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {isSelected && (
+                  <View style={styles.selectedIndicator}>
+                    <View style={styles.selectedDot} />
                   </View>
                 )}
-              </View>
-
-              <View style={styles.vehicleInfo}>
-                <View style={styles.vehicleHeader}>
-                  <Text style={styles.vehicleName}>{vehicle.name}</Text>
-                  <Text style={styles.vehiclePrice}>${fare.toFixed(2)}</Text>
-                </View>
-                
-                <Text style={styles.vehicleDescription}>{vehicle.description}</Text>
-                
-                <View style={styles.vehicleDetails}>
-                  <View style={styles.detailItem}>
-                    <Clock size={14} color="#6B7280" />
-                    <Text style={styles.detailText}>{arrivalTime} min</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Users size={14} color="#6B7280" />
-                    <Text style={styles.detailText}>{vehicle.capacity}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.featuresContainer}>
-                  {vehicle.features.slice(0, 3).map((feature, index) => (
-                    <View key={index} style={styles.featureTag}>
-                      <Text style={styles.featureText}>{feature}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {isSelected && (
-                <View style={styles.selectedIndicator}>
-                  <View style={styles.selectedDot} />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
-    maxHeight: '70%',
+    maxHeight: 500,
   },
   title: {
     fontSize: 20,
@@ -136,6 +142,7 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     marginBottom: 16,
+    height: 56,
   },
   categoryContent: {
     paddingHorizontal: 20,
@@ -150,6 +157,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    height: 40,
+    minHeight: 40,
+    maxHeight: 48,
   },
   categoryButtonActive: {
     backgroundColor: '#2563EB',
@@ -168,8 +178,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   vehicleList: {
-    flex: 1,
     paddingHorizontal: 20,
+    height: 300,
   },
   vehicleCard: {
     flexDirection: 'row',
