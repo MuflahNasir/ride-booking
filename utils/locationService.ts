@@ -19,14 +19,6 @@ export const POPULAR_LOCATIONS: Location[] = [
     coordinates: { latitude: 40.7484, longitude: -73.9857 }
   },
   {
-    address: "JFK Airport, Queens, NY, USA",
-    coordinates: { latitude: 40.6413, longitude: -73.7781 }
-  },
-  {
-    address: "LaGuardia Airport, Queens, NY, USA",
-    coordinates: { latitude: 40.7769, longitude: -73.8740 }
-  },
-  {
     address: "Statue of Liberty, New York, NY, USA",
     coordinates: { latitude: 40.6892, longitude: -74.0445 }
   },

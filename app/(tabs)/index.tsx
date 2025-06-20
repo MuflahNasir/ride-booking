@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Car, Clock, DollarSign, MapPin } from 'lucide-react-native';
@@ -18,7 +18,8 @@ export default function HomeScreen() {
   const [destination, setDestination] = useState<Location | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null);
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
-  const { currentRide, setCurrentRide, updateRideStatus } = useRide();
+  const { currentRide, setCurrentRide, updateRideStatus, startSimulation } = useRide();
+  const prevRideRef = useRef(currentRide);
 
   const distance = pickup && destination ? calculateDistance(pickup, destination) : 0;
 
@@ -55,25 +56,8 @@ export default function HomeScreen() {
       distance,
     };
 
-    setCurrentRide(newRide);
     setShowVehicleSelector(false);
-
-    // Simulate driver assignment after 3 seconds
-    setTimeout(() => {
-      const randomDriver = MOCK_DRIVERS[Math.floor(Math.random() * MOCK_DRIVERS.length)];
-      const updatedRide = { 
-        ...newRide, 
-        driver: {
-          ...randomDriver,
-          vehicle: {
-            ...randomDriver.vehicle,
-            type: selectedVehicle.name
-          }
-        }, 
-        status: 'driver_assigned' as const 
-      };
-      setCurrentRide(updatedRide);
-    }, 3000);
+    startSimulation(newRide);
   };
 
   const resetBooking = () => {
@@ -82,6 +66,17 @@ export default function HomeScreen() {
     setSelectedVehicle(null);
     setShowVehicleSelector(false);
   };
+
+  useEffect(() => {
+    if (prevRideRef.current && !currentRide) {
+      // Ride just completed or cancelled
+      setPickup(null);
+      setDestination(null);
+      setSelectedVehicle(null);
+      setShowVehicleSelector(false);
+    }
+    prevRideRef.current = currentRide;
+  }, [currentRide]);
 
   if (currentRide) {
     return (
@@ -181,7 +176,7 @@ export default function HomeScreen() {
         <VehicleSelector
           distance={distance}
           onSelectVehicle={handleVehicleSelect}
-          selectedVehicle={selectedVehicle}
+          selectedVehicle={selectedVehicle ?? undefined}
         />
       )}
 

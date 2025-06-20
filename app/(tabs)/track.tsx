@@ -9,23 +9,8 @@ import { Ride } from '@/types';
 export default function TrackScreen() {
   const [pinCode, setPinCode] = useState('');
   const [trackingRide, setTrackingRide] = useState<Ride | null>(null);
-  const [isLiveTracking, setIsLiveTracking] = useState(false);
-  const { currentRide, rideHistory } = useRide();
-
-  // Auto-update tracking for live rides
-  useEffect(() => {
-    if (trackingRide && (trackingRide.status === 'driver_arriving' || trackingRide.status === 'in_progress')) {
-      setIsLiveTracking(true);
-      const interval = setInterval(() => {
-        // In a real app, this would fetch updated location from the server
-        console.log('Updating live tracking...');
-      }, 5000);
-
-      return () => clearInterval(interval);
-    } else {
-      setIsLiveTracking(false);
-    }
-  }, [trackingRide]);
+  const { currentRide, rideHistory, driverLocation } = useRide();
+  const isLiveTracking = !!trackingRide && (trackingRide.status === 'driver_arriving' || trackingRide.status === 'in_progress');
 
   const handleTrackRide = () => {
     if (!pinCode.trim()) {
@@ -52,7 +37,6 @@ export default function TrackScreen() {
   const clearTracking = () => {
     setTrackingRide(null);
     setPinCode('');
-    setIsLiveTracking(false);
   };
 
   if (trackingRide) {
@@ -78,7 +62,7 @@ export default function TrackScreen() {
         <MapView 
           pickup={trackingRide.pickup}
           destination={trackingRide.destination}
-          driverLocation={trackingRide.driver ? trackingRide.pickup : undefined}
+          driverLocation={driverLocation || (trackingRide.driver ? trackingRide.pickup : undefined)}
           showRoute={true}
           isTracking={isLiveTracking}
         />
