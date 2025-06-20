@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Car, Clock, DollarSign, MapPin } from 'lucide-react-native';
 import LocationInput from '@/components/LocationInput';
@@ -11,6 +11,7 @@ import { Location, Ride, VehicleType } from '@/types';
 import { calculateDistance, generatePinCode } from '@/utils/locationService';
 import { calculateFare, estimateArrivalTime } from '@/utils/vehicleService';
 import { MOCK_DRIVERS } from '@/utils/mockData';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function HomeScreen() {
   const [pickup, setPickup] = useState<Location | null>(null);
@@ -97,7 +98,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView style={styles.scrollView} enableOnAndroid={true} extraScrollHeight={100}>
         <View style={styles.header}>
           <Text style={styles.title}>Book a Ride</Text>
           <Text style={styles.subtitle}>Where would you like to go?</Text>
@@ -113,6 +114,7 @@ export default function HomeScreen() {
             }}
             placeholder="Enter pickup location"
           />
+          <View style={{ height: 8 }} />
           <LocationInput
             label="Destination"
             value={destination}
@@ -173,7 +175,7 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {showVehicleSelector && pickup && destination && (
         <VehicleSelector
@@ -245,6 +247,8 @@ const styles = StyleSheet.create({
   locationInputs: {
     paddingHorizontal: 20,
     marginBottom: 24,
+    position: 'relative',
+    minHeight: 200,
   },
   ridePreview: {
     paddingHorizontal: 20,

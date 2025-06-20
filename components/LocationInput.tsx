@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Platform, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Location } from '@/types';
+import { POPULAR_LOCATIONS } from '@/utils/locationService';
 
 interface LocationInputProps {
   label: string;
@@ -13,23 +13,9 @@ interface LocationInputProps {
 
 export default function LocationInput({ label, value, onSelect, placeholder }: LocationInputProps) {
   const [inputValue, setInputValue] = useState(value?.address || '');
-  const ref = useRef<any>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const handlePlaceSelect = (data: any, details: any) => {
-    if (details) {
-      const location: Location = {
-        address: details.formatted_address || data.description,
-        coordinates: {
-          latitude: details.geometry.location.lat,
-          longitude: details.geometry.location.lng,
-        },
-      };
-      onSelect(location);
-      setInputValue(location.address);
-    }
-  };
-
-  // For web platform, use a simplified input since Google Places might not work
+  // For web platform, use a simplified input
   if (Platform.OS === 'web') {
     return (
       <View style={styles.container}>
@@ -49,32 +35,37 @@ export default function LocationInput({ label, value, onSelect, placeholder }: L
       <Text style={styles.label}>{label}</Text>
       <View style={styles.inputWrapper}>
         <MapPin size={20} color="#6B7280" style={styles.icon} />
-        <GooglePlacesAutocomplete
-          ref={ref}
+        <TextInput
+          style={styles.textInput}
           placeholder={placeholder}
-          onPress={handlePlaceSelect}
-          query={{
-            key: 'AIzaSyCtMaqd4AQayEx4-QTbuM_uL91pQrUsbK8', // Replace with your API key
-            language: 'en',
-            types: 'geocode',
-          }}
-          styles={{
-            container: styles.autocompleteContainer,
-            textInputContainer: styles.textInputContainer,
-            textInput: styles.textInput,
-            listView: styles.listView,
-            row: styles.row,
-            description: styles.description,
-          }}
-          fetchDetails={true}
-          enablePoweredByContainer={false}
-          debounce={300}
-          textInputProps={{
-            value: inputValue,
-            onChangeText: setInputValue,
-          }}
+          value={inputValue}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          onChangeText={setInputValue}
         />
       </View>
+      {showDropdown && (
+        <FlatList
+          data={POPULAR_LOCATIONS.filter(loc =>
+            loc.address.toLowerCase().includes(inputValue.toLowerCase())
+          )}
+          keyExtractor={item => item.address}
+          style={styles.listView}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => {
+                setInputValue(item.address);
+                setShowDropdown(false);
+                onSelect(item);
+              }}
+            >
+              <Text style={styles.description}>{item.address}</Text>
+            </TouchableOpacity>
+          )}
+          keyboardShouldPersistTaps="handled"
+        />
+      )}
     </View>
   );
 }
@@ -119,14 +110,6 @@ const styles = StyleSheet.create({
   placeholder: {
     color: '#9CA3AF',
   },
-  autocompleteContainer: {
-    flex: 0,
-  },
-  textInputContainer: {
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-  },
   textInput: {
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
@@ -150,6 +133,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+    maxHeight: 200,
   },
   row: {
     backgroundColor: 'transparent',
