@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useRef, useEffect, useCallback } from 'react';
-import { Ride, Location } from '@/types';
+import { Ride, Location, Driver } from '@/types';
+import { MOCK_DRIVERS } from '@/utils/mockData';
 
 const ORS_API_KEY = '5b3ce3597851110001cf6248077000b99b4545969da9e70e09910ca4'; // <-- Replace with your OpenRouteService key
 
@@ -13,6 +14,7 @@ interface RideContextType {
   startSimulation: (ride: Ride) => void;
   stopSimulation: () => void;
   routePolyline: { latitude: number; longitude: number }[];
+  clearCurrentRide: () => void;
 }
 
 const RideContext = createContext<RideContextType | null>(null);
@@ -48,13 +50,21 @@ export function RideProvider({ children }: { children: ReactNode }) {
       setCurrentRide(updatedRide);
       if (status === 'completed' || status === 'cancelled') {
         addToHistory({ ...updatedRide, completedAt: new Date() });
-        setCurrentRide(null);
-        setDriverLocation(null);
-        setRoutePolyline([]);
+        if (status === 'cancelled') {
+          setCurrentRide(null);
+          setDriverLocation(null);
+          setRoutePolyline([]);
+        }
         stopSimulation();
       }
     }
   };
+
+  const clearCurrentRide = () => {
+    setCurrentRide(null);
+    setDriverLocation(null);
+    setRoutePolyline([]);
+  }
 
   // Fetch route polyline from ORS
   const fetchRoutePolyline = async (pickup: Location, destination: Location) => {
@@ -94,15 +104,28 @@ export function RideProvider({ children }: { children: ReactNode }) {
     let step = 1; // index step for polyline
     let polylineIndex = 0;
 
+    // Helper to calculate remaining distance and time
+    function calcRemaining(polylineIndex: number) {
+      let remainingDistance = 0;
+      for (let i = polylineIndex; i < polylineCoords.length - 1; i++) {
+        remainingDistance += getDistanceMeters(polylineCoords[i], polylineCoords[i + 1]);
+      }
+      // Assume average speed 40km/h (11.11 m/s)
+      const remainingTime = Math.ceil(remainingDistance / 11.11 / 60); // in minutes
+      return { remainingDistance: +(remainingDistance / 1000).toFixed(1), remainingTime };
+    }
+
     let simulation: any = null;
     simulation = setInterval(() => {
       if (!ride) return;
       if (phase === 'finding_driver') {
-        // Simulate finding driver
+        const assignedDriver = MOCK_DRIVERS[Math.floor(Math.random() * MOCK_DRIVERS.length)];
         status = 'driver_assigned';
-        setCurrentRide(r => r ? { ...r, status } : null);
+        setCurrentRide(r => {
+          const { remainingDistance, remainingTime } = calcRemaining(0);
+          return r ? { ...r, status, driver: assignedDriver, remainingDistance, remainingTime } : null;
+        });
         phase = 'to_pickup';
-        // Start driver at the first point of the polyline
         polylineIndex = 0;
         setDriverLocation({
           address: 'Driver Start',
@@ -111,15 +134,15 @@ export function RideProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (phase === 'to_pickup') {
-        // Move driver along the polyline to pickup (first 1/3 of polyline)
         status = 'driver_arriving';
-        setCurrentRide(r => r ? { ...r, status } : null);
         polylineIndex += step;
-        const pickupIndex = Math.floor(polylineCoords.length / 3);
+        const pickupIndex = 1;
         if (polylineIndex >= pickupIndex) {
-          // Arrived at pickup
           phase = 'to_destination';
-          setCurrentRide(r => r ? { ...r, status: 'in_progress' } : null);
+          setCurrentRide(r => {
+            const { remainingDistance, remainingTime } = calcRemaining(pickupIndex);
+            return r ? { ...r, status: 'in_progress', remainingDistance, remainingTime } : null;
+          });
           setDriverLocation({
             address: 'At Pickup',
             coordinates: polylineCoords[pickupIndex]
@@ -127,6 +150,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
           polylineIndex = pickupIndex;
           return;
         }
+        setCurrentRide(r => {
+          const { remainingDistance, remainingTime } = calcRemaining(polylineIndex);
+          return r ? { ...r, status, remainingDistance, remainingTime } : null;
+        });
         setDriverLocation({
           address: 'En route to pickup',
           coordinates: polylineCoords[polylineIndex]
@@ -134,12 +161,14 @@ export function RideProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (phase === 'to_destination') {
-        // Move driver along the polyline to destination (last 2/3 of polyline)
+        setCurrentRide(r => {
+          const { remainingDistance, remainingTime } = calcRemaining(polylineIndex);
+          return r ? { ...r, status: 'in_progress', remainingDistance, remainingTime } : null;
+        });
         polylineIndex += step;
         if (polylineIndex >= polylineCoords.length - 1) {
-          // Arrived at destination
           status = 'completed';
-          setCurrentRide(r => r ? { ...r, status } : null);
+          setCurrentRide(r => r ? { ...r, status, remainingDistance: 0, remainingTime: 0 } : null);
           setDriverLocation({
             address: 'Arrived',
             coordinates: polylineCoords[polylineCoords.length - 1]
@@ -181,7 +210,8 @@ export function RideProvider({ children }: { children: ReactNode }) {
       driverLocation,
       startSimulation,
       stopSimulation,
-      routePolyline
+      routePolyline,
+      clearCurrentRide
     }}>
       {children}
     </RideContext.Provider>

@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking, Modal } from 'react-native';
 import { Car, Phone, MessageCircle, Star, Clock } from 'lucide-react-native';
 import { Ride } from '@/types';
 
 interface RideStatusCardProps {
   ride: Ride;
   onUpdateStatus: (status: Ride['status']) => void;
+  onRatingSubmitted?: () => void;
 }
 
-export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardProps) {
+export default function RideStatusCard({ ride, onUpdateStatus, onRatingSubmitted }: RideStatusCardProps) {
   const [timeRemaining, setTimeRemaining] = useState(ride.estimatedTime);
+  const [showRating, setShowRating] = useState(false);
+  const [rating, setRating] = useState(5);
 
   useEffect(() => {
     if (ride.status === 'driver_arriving' || ride.status === 'in_progress') {
@@ -18,6 +21,12 @@ export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardP
       }, 60000); // Update every minute
 
       return () => clearInterval(interval);
+    }
+  }, [ride.status]);
+
+  useEffect(() => {
+    if (ride.status === 'completed') {
+      setShowRating(true);
     }
   }, [ride.status]);
 
@@ -73,6 +82,20 @@ export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardP
         <Text style={styles.pinCode}>PIN: {ride.pinCode}</Text>
       </View>
 
+      {/* Real-time ETA and distance */}
+      {ride.status !== 'booking' && (
+        <View style={styles.realtimeInfo}>
+          <View style={styles.realtimeItem}>
+            <Clock size={16} color="#10B981" />
+            <Text style={styles.realtimeText}>{ride.remainingTime ?? ride.estimatedTime} min</Text>
+          </View>
+          <View style={styles.realtimeItem}>
+            <Car size={16} color="#2563EB" />
+            <Text style={styles.realtimeText}>{ride.remainingDistance ?? ride.distance} km</Text>
+          </View>
+        </View>
+      )}
+
       <Text style={styles.subtitle}>{statusInfo.subtitle}</Text>
 
       {/* Vehicle Type Info */}
@@ -85,9 +108,19 @@ export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardP
         <Text style={styles.vehicleTypePrice}>${ride.estimatedPrice.toFixed(2)}</Text>
       </View>
 
+      {/* Cancel Button for waiting statuses */}
+      {(ride.status === 'booking' || ride.status === 'driver_assigned' || ride.status === 'driver_arriving') && (
+        <TouchableOpacity style={styles.cancelButton} onPress={() => onUpdateStatus('cancelled')}>
+          <Text style={styles.cancelButtonText}>Cancel Ride</Text>
+        </TouchableOpacity>
+      )}
+
       {ride.driver && (
         <View style={styles.driverInfo}>
           <View style={styles.driverDetails}>
+            {ride.driver.photo && (
+              <Image source={{ uri: ride.driver.photo }} style={styles.driverAvatar} />
+            )}
             <Text style={styles.driverName}>{ride.driver.name}</Text>
             <View style={styles.ratingContainer}>
               <Star size={14} color="#F59E0B" fill="#F59E0B" />
@@ -100,11 +133,23 @@ export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardP
           <Text style={styles.plateNumber}>{ride.driver.vehicle.plate}</Text>
           
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.callButton}>
+            <TouchableOpacity
+              style={styles.callButton}
+              onPress={() => {
+                const phone = ride.driver.phone || '+1234567890';
+                Linking.openURL(`tel:${phone}`).catch(() => Alert.alert('Error', 'Unable to open dialer.'));
+              }}
+            >
               <Phone size={18} color="#FFFFFF" />
               <Text style={styles.callButtonText}>Call</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.messageButton}>
+            <TouchableOpacity
+              style={styles.messageButton}
+              onPress={() => {
+                const phone = ride.driver.phone || '+1234567890';
+                Linking.openURL(`sms:${phone}`).catch(() => Alert.alert('Error', 'Unable to open messaging app.'));
+              }}
+            >
               <MessageCircle size={18} color="#2563EB" />
               <Text style={styles.messageButtonText}>Message</Text>
             </TouchableOpacity>
@@ -123,6 +168,29 @@ export default function RideStatusCard({ ride, onUpdateStatus }: RideStatusCardP
           <Text style={styles.locationText}>{ride.destination.address}</Text>
         </View>
       </View>
+
+      <Modal visible={showRating} transparent animationType="slide">
+        <View style={styles.ratingModalOverlay}>
+          <View style={styles.ratingModal}>
+            <Text style={styles.ratingTitle}>Rate your driver</Text>
+            <View style={styles.ratingStars}>
+              {[1,2,3,4,5].map(star => (
+                <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                  <Star size={32} color={star <= rating ? '#F59E0B' : '#E5E7EB'} fill={star <= rating ? '#F59E0B' : '#E5E7EB'} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.submitRatingButton} onPress={() => {
+              setShowRating(false);
+              if (onRatingSubmitted) {
+                onRatingSubmitted();
+              }
+            }}>
+              <Text style={styles.submitRatingText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -323,5 +391,74 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#374151',
     flex: 1,
+  },
+  cancelButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+  realtimeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 16,
+  },
+  realtimeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  realtimeText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#2563EB',
+    marginLeft: 4,
+  },
+  driverAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  ratingModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ratingModal: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    width: 300,
+  },
+  ratingTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  submitRatingButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  submitRatingText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });

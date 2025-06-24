@@ -31,6 +31,7 @@ export interface Driver {
     type: string;
   };
   phone: string;
+  photo?: string;
 }
 
 export interface Ride {
@@ -47,6 +48,8 @@ export interface Ride {
   createdAt: Date;
   completedAt?: Date;
   distance: number;
+  remainingDistance?: number;
+  remainingTime?: number;
 }
 
 export interface User {

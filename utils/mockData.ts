@@ -11,7 +11,8 @@ export const MOCK_DRIVERS: Driver[] = [
       color: 'Silver',
       plate: 'ABC-123'
     },
-    phone: '+1 (555) 123-4567'
+    phone: '+1 (555) 123-4567',
+    photo: 'https://randomuser.me/api/portraits/men/32.jpg'
   },
   {
     id: '2',
@@ -23,7 +24,8 @@ export const MOCK_DRIVERS: Driver[] = [
       color: 'Blue',
       plate: 'XYZ-789'
     },
-    phone: '+1 (555) 987-6543'
+    phone: '+1 (555) 987-6543',
+    photo: 'https://randomuser.me/api/portraits/women/44.jpg'
   },
   {
     id: '3',
@@ -35,7 +37,8 @@ export const MOCK_DRIVERS: Driver[] = [
       color: 'Black',
       plate: 'DEF-456'
     },
-    phone: '+1 (555) 456-7890'
+    phone: '+1 (555) 456-7890',
+    photo: 'https://randomuser.me/api/portraits/men/65.jpg'
   }
 ];
 

@@ -18,7 +18,7 @@ export default function HomeScreen() {
   const [destination, setDestination] = useState<Location | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null);
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
-  const { currentRide, setCurrentRide, updateRideStatus, startSimulation } = useRide();
+  const { currentRide, updateRideStatus, startSimulation, driverLocation, clearCurrentRide } = useRide();
   const prevRideRef = useRef(currentRide);
 
   const distance = pickup && destination ? calculateDistance(pickup, destination) : 0;
@@ -84,9 +84,9 @@ export default function HomeScreen() {
         <MapView 
           pickup={currentRide.pickup}
           destination={currentRide.destination}
-          driverLocation={currentRide.driver ? currentRide.pickup : undefined}
+          driverLocation={driverLocation || undefined}
         />
-        <RideStatusCard ride={currentRide} onUpdateStatus={updateRideStatus} />
+        <RideStatusCard ride={currentRide} onUpdateStatus={updateRideStatus} onRatingSubmitted={clearCurrentRide} />
       </SafeAreaView>
     );
   }

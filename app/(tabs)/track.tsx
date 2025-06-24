@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, MapPin, Navigation, Clock, Phone } from 'lucide-react-native';
 import MapView from '@/components/MapView';
@@ -10,7 +10,9 @@ export default function TrackScreen() {
   const [pinCode, setPinCode] = useState('');
   const [trackingRide, setTrackingRide] = useState<Ride | null>(null);
   const { currentRide, rideHistory, driverLocation } = useRide();
-  const isLiveTracking = !!trackingRide && (trackingRide.status === 'driver_arriving' || trackingRide.status === 'in_progress');
+  // If tracking the current ride, always use the latest currentRide for live updates
+  const liveTrackingRide = trackingRide && currentRide && trackingRide.id === currentRide.id ? currentRide : trackingRide;
+  const isLiveTracking = !!liveTrackingRide && (liveTrackingRide.status === 'driver_arriving' || liveTrackingRide.status === 'in_progress');
 
   const handleTrackRide = () => {
     if (!pinCode.trim()) {
@@ -39,7 +41,7 @@ export default function TrackScreen() {
     setPinCode('');
   };
 
-  if (trackingRide) {
+  if (liveTrackingRide) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.trackingHeader}>
@@ -60,9 +62,9 @@ export default function TrackScreen() {
         </View>
         
         <MapView 
-          pickup={trackingRide.pickup}
-          destination={trackingRide.destination}
-          driverLocation={driverLocation || (trackingRide.driver ? trackingRide.pickup : undefined)}
+          pickup={liveTrackingRide.pickup}
+          destination={liveTrackingRide.destination}
+          driverLocation={driverLocation || (liveTrackingRide.driver ? liveTrackingRide.pickup : undefined)}
           showRoute={true}
           isTracking={isLiveTracking}
         />
@@ -70,13 +72,14 @@ export default function TrackScreen() {
         <View style={styles.trackingInfo}>
           <View style={styles.statusContainer}>
             <View style={styles.statusIndicator}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(trackingRide.status) }]} />
-              <Text style={styles.statusText}>{getStatusText(trackingRide.status)}</Text>
+              <View style={[styles.statusDot, { backgroundColor: getStatusColor(liveTrackingRide.status) }]} />
+              <Text style={styles.statusText}>{getStatusText(liveTrackingRide.status)}</Text>
             </View>
             {isLiveTracking && (
               <View style={styles.etaContainer}>
                 <Clock size={16} color="#10B981" />
-                <Text style={styles.etaText}>{trackingRide.estimatedTime} min</Text>
+                <Text style={styles.etaText}>{(liveTrackingRide.remainingTime ?? liveTrackingRide.estimatedTime)} min</Text>
+                <Text style={styles.etaText}> | {(liveTrackingRide.remainingDistance ?? liveTrackingRide.distance)} km</Text>
               </View>
             )}
           </View>
@@ -86,7 +89,7 @@ export default function TrackScreen() {
               <View style={styles.pickupDot} />
               <View style={styles.locationInfo}>
                 <Text style={styles.locationLabel}>Pickup</Text>
-                <Text style={styles.locationText}>{trackingRide.pickup.address}</Text>
+                <Text style={styles.locationText}>{liveTrackingRide.pickup.address}</Text>
               </View>
             </View>
             <View style={styles.locationLine} />
@@ -94,20 +97,23 @@ export default function TrackScreen() {
               <View style={styles.destinationDot} />
               <View style={styles.locationInfo}>
                 <Text style={styles.locationLabel}>Destination</Text>
-                <Text style={styles.locationText}>{trackingRide.destination.address}</Text>
+                <Text style={styles.locationText}>{liveTrackingRide.destination.address}</Text>
               </View>
             </View>
           </View>
           
-          {trackingRide.driver && (
+          {liveTrackingRide.driver && (
             <View style={styles.driverCard}>
               <View style={styles.driverHeader}>
                 <View style={styles.driverInfo}>
-                  <Text style={styles.driverName}>{trackingRide.driver.name}</Text>
+                  {liveTrackingRide.driver.photo && (
+                    <Image source={{ uri: liveTrackingRide.driver.photo }} style={styles.driverAvatar} />
+                  )}
+                  <Text style={styles.driverName}>{liveTrackingRide.driver.name}</Text>
                   <Text style={styles.vehicleInfo}>
-                    {trackingRide.driver.vehicle.color} {trackingRide.driver.vehicle.make} {trackingRide.driver.vehicle.model}
+                    {liveTrackingRide.driver.vehicle.color} {liveTrackingRide.driver.vehicle.make} {liveTrackingRide.driver.vehicle.model}
                   </Text>
-                  <Text style={styles.plateNumber}>{trackingRide.driver.vehicle.plate}</Text>
+                  <Text style={styles.plateNumber}>{liveTrackingRide.driver.vehicle.plate}</Text>
                 </View>
                 <View style={styles.driverActions}>
                   <TouchableOpacity style={styles.callButton}>
@@ -122,17 +128,17 @@ export default function TrackScreen() {
               <View style={styles.tripDetails}>
                 <View style={styles.tripDetailItem}>
                   <Text style={styles.tripDetailLabel}>Distance</Text>
-                  <Text style={styles.tripDetailValue}>{trackingRide.distance.toFixed(1)} km</Text>
+                  <Text style={styles.tripDetailValue}>{liveTrackingRide.distance.toFixed(1)} km</Text>
                 </View>
                 <View style={styles.tripDetailItem}>
                   <Text style={styles.tripDetailLabel}>Fare</Text>
                   <Text style={styles.tripDetailValue}>
-                    ${(trackingRide.actualPrice || trackingRide.estimatedPrice).toFixed(2)}
+                    ${(liveTrackingRide.actualPrice || liveTrackingRide.estimatedPrice).toFixed(2)}
                   </Text>
                 </View>
                 <View style={styles.tripDetailItem}>
                   <Text style={styles.tripDetailLabel}>PIN</Text>
-                  <Text style={styles.tripDetailValue}>{trackingRide.pinCode}</Text>
+                  <Text style={styles.tripDetailValue}>{liveTrackingRide.pinCode}</Text>
                 </View>
               </View>
             </View>
@@ -602,5 +608,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#374151',
+  },
+  driverAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
   },
 });
