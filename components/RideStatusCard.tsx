@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking, Modal, Share } from 'react-native';
 import { Car, Phone, MessageCircle, Star, Clock } from 'lucide-react-native';
 import { Ride } from '@/types';
 
@@ -154,6 +154,28 @@ export default function RideStatusCard({ ride, onUpdateStatus, onRatingSubmitted
               <Text style={styles.messageButtonText}>Message</Text>
             </TouchableOpacity>
           </View>
+          {/* Share Trip and Emergency Buttons */}
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={async () => {
+              try {
+                const message = `Track my ride!\nPIN: ${ride.pinCode}\nPickup: ${ride.pickup.address}\nDestination: ${ride.destination.address}`;
+                await Share.share({ message });
+              } catch (e) {
+                Alert.alert('Error', 'Unable to share trip.');
+              }
+            }}
+          >
+            <Text style={styles.shareButtonText}>Share Trip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sosButton}
+            onPress={() => {
+              Linking.openURL('tel:911').catch(() => Alert.alert('Error', 'Unable to open dialer.'));
+            }}
+          >
+            <Text style={styles.sosButtonText}>Emergency / SOS</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -459,6 +481,30 @@ const styles = StyleSheet.create({
   submitRatingText: {
     color: '#FFF',
     fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  shareButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  shareButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Inter-SemiBold',
+  },
+  sosButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  sosButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
   },
 });
