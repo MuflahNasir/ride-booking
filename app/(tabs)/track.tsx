@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, MapPin, Navigation, Clock, Phone } from 'lucide-react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Search, MapPin, Navigation, Clock, Phone, Maximize2, Minimize2 } from 'lucide-react-native';
 import MapView from '@/components/MapView';
 import { useRide } from '@/contexts/RideContext';
 import { Ride } from '@/types';
@@ -13,6 +13,8 @@ export default function TrackScreen() {
   // If tracking the current ride, always use the latest currentRide for live updates
   const liveTrackingRide = trackingRide && currentRide && trackingRide.id === currentRide.id ? currentRide : trackingRide;
   const isLiveTracking = !!liveTrackingRide && (liveTrackingRide.status === 'driver_arriving' || liveTrackingRide.status === 'in_progress');
+  const [isMapMaximized, setIsMapMaximized] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleTrackRide = () => {
     if (!pinCode.trim()) {
@@ -44,106 +46,127 @@ export default function TrackScreen() {
   if (liveTrackingRide) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.trackingHeader}>
-          <View style={styles.trackingTitleContainer}>
-            <Text style={styles.trackingTitle}>
-              {isLiveTracking ? 'Live Tracking' : 'Ride Details'}
-            </Text>
-            {isLiveTracking && (
-              <View style={styles.liveIndicator}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
+        <View style={isMapMaximized ? styles.mapFullScreen : styles.mapContainer}>
+          <MapView 
+            pickup={liveTrackingRide.pickup}
+            destination={liveTrackingRide.destination}
+            driverLocation={driverLocation || (liveTrackingRide.driver ? liveTrackingRide.pickup : undefined)}
+            showRoute={true}
+            isTracking={isLiveTracking}
+          />
+          <TouchableOpacity
+            style={[
+              styles.maximizeButton,
+              isMapMaximized
+                ? { top: insets.top + 12, right: 16, bottom: undefined }
+                : { bottom: insets.bottom + 24, right: 16, top: undefined }
+            ]}
+            onPress={() => setIsMapMaximized(!isMapMaximized)}
+          >
+            {isMapMaximized ? (
+              <Minimize2 size={24} color="#2563EB" />
+            ) : (
+              <Maximize2 size={24} color="#2563EB" />
             )}
-          </View>
-          <TouchableOpacity onPress={clearTracking} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
-        
-        <MapView 
-          pickup={liveTrackingRide.pickup}
-          destination={liveTrackingRide.destination}
-          driverLocation={driverLocation || (liveTrackingRide.driver ? liveTrackingRide.pickup : undefined)}
-          showRoute={true}
-          isTracking={isLiveTracking}
-        />
-        
-        <View style={styles.trackingInfo}>
-          <View style={styles.statusContainer}>
-            <View style={styles.statusIndicator}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(liveTrackingRide.status) }]} />
-              <Text style={styles.statusText}>{getStatusText(liveTrackingRide.status)}</Text>
-            </View>
-            {isLiveTracking && (
-              <View style={styles.etaContainer}>
-                <Clock size={16} color="#10B981" />
-                <Text style={styles.etaText}>{(liveTrackingRide.remainingTime ?? liveTrackingRide.estimatedTime)} min</Text>
-                <Text style={styles.etaText}> | {(liveTrackingRide.remainingDistance ?? liveTrackingRide.distance)} km</Text>
+        {!isMapMaximized && (
+          <>
+            <View style={styles.trackingHeader}>
+              <View style={styles.trackingTitleContainer}>
+                <Text style={styles.trackingTitle}>
+                  {isLiveTracking ? 'Live Tracking' : 'Ride Details'}
+                </Text>
+                {isLiveTracking && (
+                  <View style={styles.liveIndicator}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>LIVE</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-          
-          <View style={styles.routeDetails}>
-            <View style={styles.locationRow}>
-              <View style={styles.pickupDot} />
-              <View style={styles.locationInfo}>
-                <Text style={styles.locationLabel}>Pickup</Text>
-                <Text style={styles.locationText}>{liveTrackingRide.pickup.address}</Text>
-              </View>
+              <TouchableOpacity onPress={clearTracking} style={styles.clearButton}>
+                <Text style={styles.clearButtonText}>Close</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.locationLine} />
-            <View style={styles.locationRow}>
-              <View style={styles.destinationDot} />
-              <View style={styles.locationInfo}>
-                <Text style={styles.locationLabel}>Destination</Text>
-                <Text style={styles.locationText}>{liveTrackingRide.destination.address}</Text>
-              </View>
-            </View>
-          </View>
-          
-          {liveTrackingRide.driver && (
-            <View style={styles.driverCard}>
-              <View style={styles.driverHeader}>
-                <View style={styles.driverInfo}>
-                  {liveTrackingRide.driver.photo && (
-                    <Image source={{ uri: liveTrackingRide.driver.photo }} style={styles.driverAvatar} />
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+              <View style={styles.trackingInfo}>
+                <View style={styles.statusContainer}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(liveTrackingRide.status) }]} />
+                    <Text style={styles.statusText}>{getStatusText(liveTrackingRide.status)}</Text>
+                  </View>
+                  {isLiveTracking && (
+                    <View style={styles.etaContainer}>
+                      <Clock size={16} color="#10B981" />
+                      <Text style={styles.etaText}>{(liveTrackingRide.remainingTime ?? liveTrackingRide.estimatedTime)} min</Text>
+                      <Text style={styles.etaText}> | {(liveTrackingRide.remainingDistance ?? liveTrackingRide.distance)} km</Text>
+                    </View>
                   )}
-                  <Text style={styles.driverName}>{liveTrackingRide.driver.name}</Text>
-                  <Text style={styles.vehicleInfo}>
-                    {liveTrackingRide.driver.vehicle.color} {liveTrackingRide.driver.vehicle.make} {liveTrackingRide.driver.vehicle.model}
-                  </Text>
-                  <Text style={styles.plateNumber}>{liveTrackingRide.driver.vehicle.plate}</Text>
                 </View>
-                <View style={styles.driverActions}>
-                  <TouchableOpacity style={styles.callButton}>
-                    <Phone size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.navigateButton}>
-                    <Navigation size={18} color="#2563EB" />
-                  </TouchableOpacity>
+                
+                <View style={styles.routeDetails}>
+                  <View style={styles.locationRow}>
+                    <View style={styles.pickupDot} />
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationLabel}>Pickup</Text>
+                      <Text style={styles.locationText}>{liveTrackingRide.pickup.address}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.locationLine} />
+                  <View style={styles.locationRow}>
+                    <View style={styles.destinationDot} />
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationLabel}>Destination</Text>
+                      <Text style={styles.locationText}>{liveTrackingRide.destination.address}</Text>
+                    </View>
+                  </View>
                 </View>
+                
+                {liveTrackingRide.driver && (
+                  <View style={styles.driverCard}>
+                    <View style={styles.driverHeader}>
+                      <View style={styles.driverInfo}>
+                        {liveTrackingRide.driver.photo && (
+                          <Image source={{ uri: liveTrackingRide.driver.photo }} style={styles.driverAvatar} />
+                        )}
+                        <Text style={styles.driverName}>{liveTrackingRide.driver.name}</Text>
+                        <Text style={styles.vehicleInfo}>
+                          {liveTrackingRide.driver.vehicle.color} {liveTrackingRide.driver.vehicle.make} {liveTrackingRide.driver.vehicle.model}
+                        </Text>
+                        <Text style={styles.plateNumber}>{liveTrackingRide.driver.vehicle.plate}</Text>
+                      </View>
+                      <View style={styles.driverActions}>
+                        <TouchableOpacity style={styles.callButton}>
+                          <Phone size={18} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.navigateButton}>
+                          <Navigation size={18} color="#2563EB" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.tripDetails}>
+                      <View style={styles.tripDetailItem}>
+                        <Text style={styles.tripDetailLabel}>Distance</Text>
+                        <Text style={styles.tripDetailValue}>{liveTrackingRide.distance.toFixed(1)} km</Text>
+                      </View>
+                      <View style={styles.tripDetailItem}>
+                        <Text style={styles.tripDetailLabel}>Fare</Text>
+                        <Text style={styles.tripDetailValue}>
+                          ${(liveTrackingRide.actualPrice || liveTrackingRide.estimatedPrice).toFixed(2)}
+                        </Text>
+                      </View>
+                      <View style={styles.tripDetailItem}>
+                        <Text style={styles.tripDetailLabel}>PIN</Text>
+                        <Text style={styles.tripDetailValue}>{liveTrackingRide.pinCode}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
-              
-              <View style={styles.tripDetails}>
-                <View style={styles.tripDetailItem}>
-                  <Text style={styles.tripDetailLabel}>Distance</Text>
-                  <Text style={styles.tripDetailValue}>{liveTrackingRide.distance.toFixed(1)} km</Text>
-                </View>
-                <View style={styles.tripDetailItem}>
-                  <Text style={styles.tripDetailLabel}>Fare</Text>
-                  <Text style={styles.tripDetailValue}>
-                    ${(liveTrackingRide.actualPrice || liveTrackingRide.estimatedPrice).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.tripDetailItem}>
-                  <Text style={styles.tripDetailLabel}>PIN</Text>
-                  <Text style={styles.tripDetailValue}>{liveTrackingRide.pinCode}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
+            </ScrollView>
+          </>
+        )}
       </SafeAreaView>
     );
   }
@@ -614,5 +637,27 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+  },
+  mapFullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  mapContainer: {
+    height: 250,
+    width: '100%',
+  },
+  maximizeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 8,
+    elevation: 4,
+    zIndex: 20,
   },
 });

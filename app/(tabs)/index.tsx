@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Car, Clock, DollarSign, MapPin } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Car, Clock, DollarSign, MapPin, Maximize2, Minimize2 } from 'lucide-react-native';
 import LocationInput from '@/components/LocationInput';
 import MapView from '@/components/MapView';
 import VehicleSelector from '@/components/VehicleSelector';
@@ -20,6 +20,8 @@ export default function HomeScreen() {
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const { currentRide, updateRideStatus, startSimulation, driverLocation, clearCurrentRide } = useRide();
   const prevRideRef = useRef(currentRide);
+  const [isMapMaximized, setIsMapMaximized] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const distance = pickup && destination ? calculateDistance(pickup, destination) : 0;
 
@@ -81,12 +83,33 @@ export default function HomeScreen() {
   if (currentRide) {
     return (
       <SafeAreaView style={styles.container}>
-        <MapView 
-          pickup={currentRide.pickup}
-          destination={currentRide.destination}
-          driverLocation={driverLocation || undefined}
-        />
-        <RideStatusCard ride={currentRide} onUpdateStatus={updateRideStatus} onRatingSubmitted={clearCurrentRide} />
+        <View style={isMapMaximized ? styles.mapFullScreen : styles.mapContainer}>
+          <MapView 
+            pickup={currentRide.pickup}
+            destination={currentRide.destination}
+            driverLocation={driverLocation || undefined}
+          />
+          <TouchableOpacity
+            style={[
+              styles.maximizeButton,
+              isMapMaximized
+                ? { top: insets.top + 12, right: 16, bottom: undefined }
+                : { bottom: insets.bottom + 24, right: 16, top: undefined }
+            ]}
+            onPress={() => setIsMapMaximized(!isMapMaximized)}
+          >
+            {isMapMaximized ? (
+              <Minimize2 size={24} color="#2563EB" />
+            ) : (
+              <Maximize2 size={24} color="#2563EB" />
+            )}
+          </TouchableOpacity>
+        </View>
+        {!isMapMaximized && (
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <RideStatusCard ride={currentRide} onUpdateStatus={updateRideStatus} onRatingSubmitted={clearCurrentRide} />
+          </ScrollView>
+        )}
       </SafeAreaView>
     );
   }
@@ -420,5 +443,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+  },
+  mapFullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  mapContainer: {
+    height: 250,
+    width: '100%',
+  },
+  maximizeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 8,
+    elevation: 4,
+    zIndex: 20,
   },
 });
