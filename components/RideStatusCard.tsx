@@ -136,7 +136,7 @@ export default function RideStatusCard({ ride, onUpdateStatus, onRatingSubmitted
             <TouchableOpacity
               style={styles.callButton}
               onPress={() => {
-                const phone = ride.driver.phone || '+1234567890';
+                const phone = ride.driver?.phone || '+1234567890';
                 Linking.openURL(`tel:${phone}`).catch(() => Alert.alert('Error', 'Unable to open dialer.'));
               }}
             >
@@ -146,7 +146,7 @@ export default function RideStatusCard({ ride, onUpdateStatus, onRatingSubmitted
             <TouchableOpacity
               style={styles.messageButton}
               onPress={() => {
-                const phone = ride.driver.phone || '+1234567890';
+                const phone = ride.driver?.phone || '+1234567890';
                 Linking.openURL(`sms:${phone}`).catch(() => Alert.alert('Error', 'Unable to open messaging app.'));
               }}
             >

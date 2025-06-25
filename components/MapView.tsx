@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import MapView, { Marker, Polyline, Region } from 'react-native-maps';
 import { View, StyleSheet } from 'react-native';
 import { Location } from '@/types';
@@ -15,6 +15,7 @@ interface MapViewProps {
 
 export default function RealMapView({ pickup, destination, driverLocation, showRoute = true }: MapViewProps) {
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const mapRef = useRef<MapView>(null);
 
   // Fetch directions when pickup or destination changes
   useEffect(() => {
@@ -43,6 +44,19 @@ export default function RealMapView({ pickup, destination, driverLocation, showR
     fetchRoute();
   }, [pickup, destination]);
 
+  // Center the map on the moving marker (driverLocation or pickup)
+  useEffect(() => {
+    const coord = driverLocation?.coordinates || pickup?.coordinates;
+    if (coord && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: coord.latitude,
+        longitude: coord.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 500);
+    }
+  }, [driverLocation, pickup]);
+
   // Center the map
   const initialRegion: Region = pickup
     ? {
@@ -60,7 +74,7 @@ export default function RealMapView({ pickup, destination, driverLocation, showR
 
   return (
     <View style={styles.container}>
-      <MapView style={StyleSheet.absoluteFill} initialRegion={initialRegion}>
+      <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={initialRegion}>
         {pickup && (
           <Marker
             coordinate={pickup.coordinates}
